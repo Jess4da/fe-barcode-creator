@@ -1,0 +1,232 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import JsBarcode from "jsbarcode";
+  import QRCode from "qrcode";
+
+  let inputText = $state("");
+  let barcodeCanvas = $state<HTMLCanvasElement>();
+  let qrcodeCanvas = $state<HTMLCanvasElement>();
+  let isClient = $state(false);
+
+  onMount(() => {
+    isClient = true;
+    // Generate initial codes with default text
+    if (inputText) {
+      generateCodes();
+    }
+
+    // Add resize listener for responsive code generation
+    const handleResize = () => {
+      if (inputText.trim()) {
+        generateCodes();
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  });
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      inputText = text;
+      generateCodes();
+    } catch (err) {
+      console.error("Failed to read clipboard contents: ", err);
+      alert(
+        "Failed to read clipboard. Please make sure you have given permission to access clipboard."
+      );
+    }
+  }
+
+  function generateCodes() {
+    if (!isClient || !inputText.trim()) return;
+
+    // Generate barcode
+    if (barcodeCanvas) {
+      try {
+        // Get device width for responsive sizing
+        const isMobile = window.innerWidth < 640; // sm breakpoint
+        const barcodeWidth = isMobile ? 1.5 : 2;
+        const barcodeHeight = isMobile ? 80 : 100;
+        const fontSize = isMobile ? 12 : 14;
+
+        JsBarcode(barcodeCanvas, inputText, {
+          format: "CODE128",
+          width: barcodeWidth,
+          height: barcodeHeight,
+          displayValue: true,
+          fontSize: fontSize,
+          margin: isMobile ? 5 : 10,
+        });
+      } catch (error) {
+        console.error("Error generating barcode:", error);
+      }
+    }
+
+    // Generate QR code
+    if (qrcodeCanvas) {
+      // Get device width for responsive sizing
+      const isMobile = window.innerWidth < 640; // sm breakpoint
+      const qrWidth = isMobile ? 250 : 300;
+
+      QRCode.toCanvas(qrcodeCanvas, inputText, {
+        width: qrWidth,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      }).catch((err) => {
+        console.error("Error generating QR code:", err);
+      });
+    }
+  }
+
+  // Generate codes when input changes
+  $effect(() => {
+    if (isClient && inputText.trim()) {
+      generateCodes();
+    }
+  });
+</script>
+
+<div class="container mx-auto p-4 sm:p-6 max-w-4xl">
+  <div class="text-center mb-3">
+    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary mb-3 sm:mb-4">
+      Barcode & QR Code Generator
+    </h1>
+    <p class="text-sm sm:text-base lg:text-lg text-base-content/70 px-2">
+      Enter text below or paste from clipboard to generate barcodes and QR codes instantly
+    </p>
+  </div>
+
+  <!-- Input Section -->
+  <div class="card bg-base-100 shadow-xl mb-3">
+    <div class="card-body p-4 sm:p-6">
+      <h2 class="card-title text-xl sm:text-2xl mb-3 sm:mb-4">Text Input</h2>
+
+      <div class="form-control w-full">
+        <label class="label" for="text-input">
+          <span class="label-text text-base sm:text-lg">Enter your text:</span>
+        </label>
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <input
+            id="text-input"
+            type="text"
+            placeholder="Type your text here..."
+            class="input input-bordered input-md w-full sm:input-lg flex-1 text-sm sm:text-base"
+            bind:value={inputText}
+          />
+          <button
+            class="btn btn-primary btn-md sm:btn-lg whitespace-nowrap"
+            onclick={pasteFromClipboard}
+            title="Paste from clipboard"
+          >
+            <span>📋Paste</span>
+          </button>
+        </div>
+        {#if inputText.trim()}
+          <div class="label">
+            <span class="label-text-alt text-success">✓ Ready to generate codes</span>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+
+  {#if inputText.trim()}
+    <!-- Barcode Section -->
+    <div class="card bg-base-100 shadow-xl mb-3">
+      <div class="card-body p-4 sm:p-6">
+        <h2 class="card-title text-xl sm:text-2xl mb-3 sm:mb-4 flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 sm:h-6 sm:w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 5a2 2 0 012-2h4a2 2 0 012 2v14l-5-3-5 3V5z"
+            />
+          </svg>
+          <span class="text-base sm:text-xl lg:text-2xl">Barcode (CODE128)</span>
+        </h2>
+
+        <div class="flex justify-center p-3 sm:p-6 bg-base-200 rounded-lg overflow-x-auto">
+          <canvas
+            bind:this={barcodeCanvas}
+            class="border-2 border-base-300 rounded bg-white max-w-full"
+          ></canvas>
+        </div>
+
+        <div class="text-center mt-3 sm:mt-4 px-2">
+          <p class="text-xs sm:text-sm text-base-content/60 break-words">
+            Text: <span class="font-mono font-semibold">{inputText}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="card bg-base-100 shadow-xl mb-3">
+      <div class="card-body p-4 sm:p-6">
+        <h2 class="card-title text-xl sm:text-2xl mb-3 sm:mb-4 flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 sm:h-6 sm:w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+            />
+          </svg>
+          <span class="text-base sm:text-xl lg:text-2xl">QR Code</span>
+        </h2>
+
+        <div class="flex justify-center p-3 sm:p-6 bg-base-200 rounded-lg">
+          <canvas
+            bind:this={qrcodeCanvas}
+            class="border-2 border-base-300 rounded bg-white max-w-full h-auto"
+          ></canvas>
+        </div>
+
+        <div class="text-center mt-3 sm:mt-4 px-2">
+          <p class="text-xs sm:text-sm text-base-content/60 break-words">
+            Scan with your camera to read: <span class="font-mono font-semibold">{inputText}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <!-- Empty State -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body text-center py-12 sm:py-16 px-4 sm:px-6">
+        <div class="text-4xl sm:text-6xl mb-3 sm:mb-4">📱</div>
+        <h3 class="text-xl sm:text-2xl font-semibold mb-2">Ready to Generate</h3>
+        <p class="text-sm sm:text-base text-base-content/60 px-2">
+          Enter some text above to see your barcode and QR code appear here
+        </p>
+      </div>
+    </div>
+  {/if}
+</div>

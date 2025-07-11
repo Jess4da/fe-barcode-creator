@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+    themes: dark --default;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Improve button touch targets */
+  .btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve input touch targets */
+  .input {
+    min-height: 44px;
+  }
+  
+  /* Prevent zoom on input focus on iOS */
+  .input {
+    font-size: 16px;
+  }
+}
+
+/* Improve canvas rendering on high-DPI screens */
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
