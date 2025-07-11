@@ -28,6 +28,6 @@ canvas {
   image-rendering: crisp-edges;
 }
 
-html {
+:root {
     @apply select-none bg-base-100;
 }
