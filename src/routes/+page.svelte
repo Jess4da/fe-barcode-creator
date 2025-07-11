@@ -54,15 +54,32 @@
         const barcodeWidth = isMobile ? 1.5 : 2;
         const barcodeHeight = isMobile ? 80 : 100;
         const fontSize = isMobile ? 12 : 14;
+        const margin = isMobile ? 5 : 10;
 
+        // High-DPI canvas setup for crisp rendering
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const ctx = barcodeCanvas.getContext("2d");
+
+        // Generate barcode with higher resolution
         JsBarcode(barcodeCanvas, inputText, {
           format: "CODE128",
-          width: barcodeWidth,
-          height: barcodeHeight,
+          width: barcodeWidth * devicePixelRatio,
+          height: barcodeHeight * devicePixelRatio,
           displayValue: true,
-          fontSize: fontSize,
-          margin: isMobile ? 5 : 10,
+          fontSize: fontSize * devicePixelRatio,
+          margin: margin * devicePixelRatio,
         });
+
+        // Scale down the canvas display size to maintain visual size
+        const canvasWidth = barcodeCanvas.width;
+        const canvasHeight = barcodeCanvas.height;
+        barcodeCanvas.style.width = canvasWidth / devicePixelRatio + "px";
+        barcodeCanvas.style.height = canvasHeight / devicePixelRatio + "px";
+
+        // Improve rendering quality
+        if (ctx) {
+          ctx.imageSmoothingEnabled = false;
+        }
       } catch (error) {
         console.error("Error generating barcode:", error);
       }
@@ -73,17 +90,32 @@
       // Get device width for responsive sizing
       const isMobile = window.innerWidth < 640; // sm breakpoint
       const qrWidth = isMobile ? 250 : 300;
+      const devicePixelRatio = window.devicePixelRatio || 1;
 
       QRCode.toCanvas(qrcodeCanvas, inputText, {
-        width: qrWidth,
+        width: qrWidth * devicePixelRatio,
         margin: 2,
         color: {
           dark: "#000000",
           light: "#FFFFFF",
         },
-      }).catch((err) => {
-        console.error("Error generating QR code:", err);
-      });
+      })
+        .then(() => {
+          // Scale down the canvas display size to maintain visual size
+          if (qrcodeCanvas) {
+            qrcodeCanvas.style.width = qrWidth + "px";
+            qrcodeCanvas.style.height = qrWidth + "px";
+
+            // Improve rendering quality
+            const ctx = qrcodeCanvas.getContext("2d");
+            if (ctx) {
+              ctx.imageSmoothingEnabled = false;
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("Error generating QR code:", err);
+        });
     }
   }
 
