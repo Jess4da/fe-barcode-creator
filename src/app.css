@@ -29,5 +29,5 @@ canvas {
 }
 
 html {
-    @apply select-none;
+    @apply select-none bg-base-100;
 }
