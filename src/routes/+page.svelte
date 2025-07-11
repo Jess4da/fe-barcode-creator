@@ -7,6 +7,7 @@
   let barcodeCanvas = $state<HTMLCanvasElement>();
   let qrcodeCanvas = $state<HTMLCanvasElement>();
   let isClient = $state(false);
+  let isClipboardLoading = $state(false);
 
   onMount(() => {
     isClient = true;
@@ -31,15 +32,77 @@
   });
 
   async function pasteFromClipboard() {
+    if (isClipboardLoading) return; // Prevent multiple simultaneous requests
+
+    isClipboardLoading = true;
+
     try {
+      // Check if clipboard API is supported
+      if (!navigator.clipboard) {
+        alert("Clipboard access is not supported in this browser. Please copy and paste manually.");
+        return;
+      }
+
+      // Request clipboard permission first (especially important on mobile/iOS)
+      if (navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({
+            name: "clipboard-read" as PermissionName,
+          });
+          if (permission.state === "denied") {
+            alert(
+              "Clipboard access has been denied. Please enable clipboard permissions in your browser settings and try again."
+            );
+            return;
+          }
+        } catch (permissionError) {
+          // Some browsers don't support permission query for clipboard
+          console.log("Permission query not supported, attempting direct clipboard access");
+        }
+      }
+
+      // Attempt to read from clipboard
       const text = await navigator.clipboard.readText();
+
+      if (!text || text.trim() === "") {
+        alert("Clipboard is empty or contains no text content.");
+        return;
+      }
+
       inputText = text;
       generateCodes();
+
+      // Success feedback
+      console.log(
+        "Successfully pasted from clipboard:",
+        text.substring(0, 50) + (text.length > 50 ? "..." : "")
+      );
     } catch (err) {
       console.error("Failed to read clipboard contents: ", err);
-      alert(
-        "Failed to read clipboard. Please make sure you have given permission to access clipboard."
-      );
+
+      // More specific error messages based on error type
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (errorMessage.includes("denied") || errorMessage.includes("permission")) {
+        alert(
+          "Clipboard access denied. On mobile devices:\n\n" +
+            "• iOS: Tap the input field first, then try pasting\n" +
+            "• Android: Allow clipboard access when prompted\n" +
+            "• Alternative: Manually copy and paste into the text field"
+        );
+      } else if (errorMessage.includes("not allowed") || errorMessage.includes("user activation")) {
+        alert(
+          "Clipboard access requires user interaction. Please try:\n\n" +
+            "• Tap the paste button again\n" +
+            "• Or manually paste into the text field using your device's paste option"
+        );
+      } else {
+        alert(
+          "Unable to access clipboard. You can manually paste text into the input field instead."
+        );
+      }
+    } finally {
+      isClipboardLoading = false;
     }
   }
 
@@ -157,9 +220,15 @@
           <button
             class="btn btn-primary btn-md sm:btn-lg whitespace-nowrap"
             onclick={pasteFromClipboard}
-            title="Paste from clipboard"
+            disabled={isClipboardLoading}
+            title={isClipboardLoading ? "Accessing clipboard..." : "Paste from clipboard"}
           >
-            <span>📋Paste</span>
+            {#if isClipboardLoading}
+              <span class="loading loading-spinner loading-sm"></span>
+              <span class="hidden sm:inline">Pasting...</span>
+            {:else}
+              <span>📋Paste</span>
+            {/if}
           </button>
         </div>
         {#if inputText.trim()}

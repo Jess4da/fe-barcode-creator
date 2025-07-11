@@ -27,3 +27,7 @@ canvas {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
+
+html {
+    @apply select-none;
+}
