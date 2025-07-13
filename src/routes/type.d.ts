@@ -1,0 +1,3 @@
+interface IPageQuery {
+  text: string;
+}

@@ -3,6 +3,8 @@
   import JsBarcode from "jsbarcode";
   import QRCode from "qrcode";
 
+  let { initText = "" } = $props();
+
   let inputText = $state("");
   let barcodeCanvas = $state<HTMLCanvasElement>();
   let qrcodeCanvas = $state<HTMLCanvasElement>();
@@ -11,6 +13,7 @@
 
   onMount(() => {
     isClient = true;
+    inputText = initText.trim() || "";
     // Generate initial codes with default text
     if (inputText) {
       generateCodes();
